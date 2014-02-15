@@ -6,7 +6,7 @@
  * @author Ben Plum
  * @link http://benplum.com
  * @license http://opensource.org/licenses/MIT
- * @Version 1.0.0
+ * @Version 1.0.1
  */
 class Nano_Navigation {
 
@@ -48,13 +48,19 @@ class Nano_Navigation {
 			$parts = explode("/", trim(str_ireplace($this->base_url, "", $page["url"]), "/"));
 			$count = count($parts);
 
-			$parsed = array_merge_recursive($parsed, $this->parse_tree($parts, $page, $current_page));
+			$parsed = array_merge_recursive($parsed, $this->parse_tree($parts, $page));
 		}
 
 		$this->sort_tree($parsed);
 
 		unset($parsed["children"]["_index"]);
 		$this->navigation = $parsed["children"];
+
+		foreach ($this->navigation as $p) {
+			if (isset($p["children"])) {
+				$this->find_siblings($p["children"], $prev_page, $next_page);
+			}
+		}
 
 		if ($this->redirect_lower) {
 			$this->redirect_lower($this->navigation);
@@ -65,18 +71,18 @@ class Nano_Navigation {
 		$twig_vars["navigation"] = $this->navigation;
 	}
 
-	private function parse_tree($parts = array(), $page = array(), $current_page = array()) {
+	private function parse_tree($parts = array(), $page = array()) {
 		if (count($parts) == 1) {
 			$parts0 = ($parts[0] == "") ? "_index" : $parts[0];
 			return array("children" => array($parts0 => $page));
 		} else {
 			if ($parts[1] == "") {
 				array_pop($parts);
-				return $this->parse_tree($parts, $page, $current_page);
+				return $this->parse_tree($parts, $page);
 			}
 
 			$first = array_shift($parts);
-			return array("children" => array($first => $this->parse_tree($parts, $page, $current_page)));
+			return array("children" => array($first => $this->parse_tree($parts, $page)));
         }
     }
 
@@ -104,6 +110,24 @@ class Nano_Navigation {
 		}
 
 		return true;
+	}
+
+	private function find_siblings($navigation, &$prev_page, &$next_page) {
+		for ($i = 0, $count = count($navigation); $i < $count; $i++) {
+			$page = $navigation[$i];
+
+			if ($page["active"]) {
+				if ($i > 0) {
+					$prev_page = $navigation[$i - 1];
+				}
+				if ($i < $count) {
+					$next_page = $navigation[$i + 1];
+				}
+				return;
+			} else if (isset($page["children"])) {
+				$this->find_siblings($page["children"], $prev_page, $next_page);
+			}
+		}
 	}
 
     private function redirect_lower($navigation) {
