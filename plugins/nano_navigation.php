@@ -149,7 +149,7 @@ class Nano_Navigation {
 		for ($i = 0, $count = count($navigation); $i < $count; $i++) {
 			$page = $navigation[ $keys[$i] ];
 
-			if ($page["active"]) {
+			if (isset($page["active"])) {
 				if ($i > 0) {
 					$next_page = $navigation[ $keys[$i - 1] ];
 				}
